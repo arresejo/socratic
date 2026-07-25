@@ -299,9 +299,24 @@ function renderDots() {
       left:${(cp.t_pause / video.duration) * 100}%;
       transform:translate(-50%,-50%); width:13px; height:13px;
       border-radius:50%; background:${color}; border:2px solid rgba(0,0,0,.6);
-      z-index:100; pointer-events:none;`;
+      z-index:100; pointer-events:auto; cursor:pointer;`;
+    dot.title = cp.status === "pending"
+      ? `Question à ${fmtTime(cp.t_pause)} — ${cp.concept}`
+      : `Rejouer cette question — ${cp.concept}`;
+    // Auto = one-shot ; clic = re-test volontaire. On intercepte mousedown/click
+    // pour que le clic sur la pastille ne déclenche PAS le seek de YouTube.
+    for (const evt of ["mousedown", "mouseup", "click"]) {
+      dot.addEventListener(evt, (e) => { e.stopPropagation(); e.preventDefault(); });
+    }
+    dot.addEventListener("click", () => {
+      if (state === "watching") { cp.verdict = undefined; fire(cp); }
+    });
     bar.appendChild(dot);
   }
+}
+
+function fmtTime(s) {
+  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 }
 
 function removeDots() {
