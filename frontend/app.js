@@ -79,7 +79,7 @@ function applyIntensity(list, intensity) {
 
 function updateProgress() {
   const done = cps.filter((c) => c.status !== "pending" && c.status !== "active").length;
-  ui.progress.textContent = `Checkpoints : ${done}/${cps.length}`;
+  ui.progress.textContent = `Checkpoints: ${done}/${cps.length}`;
   cps.forEach((cp) => {
     const dot = ui.timeline.querySelector(`[data-cp-id="${cp.id}"]`);
     if (dot) dot.className = `cp-dot ${cp.verdict || cp.status}`;
@@ -113,7 +113,7 @@ async function buildSession() {
   const url = ui.url.value.trim();
   if (!url) return;
   ui.build.disabled = true;
-  setStatus("Préparation de la session… (transcript + segmentation LLM, parfois quelques minutes)");
+  setStatus("Building the session… (transcript + LLM segmentation, can take a few minutes)");
 
   // Compteur de tokens en direct pendant le build : le "spinner" devient la
   // preuve que Gemma 4 travaille localement (argument Edge, visible).
@@ -126,8 +126,8 @@ async function buildSession() {
       const tokens = (s.prompt_tokens + s.completion_tokens)
                    - (baseline.prompt_tokens + baseline.completion_tokens);
       if (calls > 0) {
-        setStatus(`Préparation de la session… ${calls} appels Gemma 4 · ` +
-          `${tokens.toLocaleString("fr-FR")} tokens traités sur cette machine 🔒`);
+        setStatus(`Building the session… ${calls} Gemma 4 calls · ` +
+          `${tokens.toLocaleString("en-US")} tokens processed on this machine 🔒`);
       }
     } catch { /* transient */ }
   }, 1500);
@@ -135,7 +135,7 @@ async function buildSession() {
   try {
     session = await api("/api/session", { url });
   } catch (e) {
-    setStatus(`Échec : ${e.message}`);
+    setStatus(`Failed: ${e.message}`);
     ui.build.disabled = false;
     return;
   } finally {
@@ -204,7 +204,7 @@ function startCountdown(cp) {
   state = "countdown";
   let n = 3;
   ui.countdown.classList.remove("hidden");
-  ui.countdown.textContent = `Question dans ${n}…`;
+  ui.countdown.textContent = `Question in ${n}…`;
   countdownId = setInterval(() => {
     n -= 1;
     if (n <= 0) {
@@ -212,7 +212,7 @@ function startCountdown(cp) {
       ui.countdown.classList.add("hidden");
       fireCheckpoint(cp);
     } else {
-      ui.countdown.textContent = `Question dans ${n}…`;
+      ui.countdown.textContent = `Question in ${n}…`;
     }
   }, 1000);
 }
@@ -259,19 +259,19 @@ function setOverlay(s) {
 
 function startListening() {
   if (!Voice.supported()) {
-    ui.ovStatus.textContent = "Micro indisponible — répondez au clavier.";
+    ui.ovStatus.textContent = "Mic unavailable — type your answer.";
     ui.typeInput.focus();
     return;
   }
   setOverlay("listening");
   ui.waveform.classList.remove("hidden");
   ui.micDone.classList.remove("hidden");
-  ui.ovStatus.textContent = "Je vous écoute…";
+  ui.ovStatus.textContent = "Listening…";
   Voice.listen({
     canvas: ui.waveform,
     onEnd: submitAudio,
     onError: () => {
-      ui.ovStatus.textContent = "Accès micro refusé — répondez au clavier.";
+      ui.ovStatus.textContent = "Mic access denied — type your answer.";
       ui.typeInput.focus();
     },
   });
@@ -305,11 +305,11 @@ async function submitAudio(blob) {
   if (!text) {
     if (sttRetries < 1) {
       sttRetries += 1;
-      ui.ovStatus.textContent = "Je n’ai pas compris…";
-      await Voice.speak("Je n’ai pas bien entendu, une fois de plus ?");
+      ui.ovStatus.textContent = "Didn't catch that…";
+      await Voice.speak("I didn't quite catch that — one more time?");
       startListening();
     } else {
-      ui.ovStatus.textContent = "Toujours rien — répondez au clavier.";
+      ui.ovStatus.textContent = "Still nothing — type your answer.";
       ui.typeInput.focus();
     }
     return;
@@ -331,7 +331,7 @@ async function submitAnswer(answer) {
   ui.typeInput.value = "";
   ui.ovHeard.textContent = answer;
   ui.ovHeard.classList.remove("hidden");
-  ui.ovStatus.textContent = "Évaluation";
+  ui.ovStatus.textContent = "Grading";
   ui.ovStatus.classList.add("thinking");
   Voice.speak(ACKS[Math.floor(Math.random() * ACKS.length)]); // couvre le début de l'attente
 
@@ -348,7 +348,7 @@ async function submitAnswer(answer) {
       is_followup: isFollowup,
     });
   } catch (e) {
-    ui.ovStatus.textContent = `Évaluation impossible (${e.message}) — on continue.`;
+    ui.ovStatus.textContent = `Grading failed (${e.message}) — moving on.`;
     return resumeSoon("skipped", 2500);
   }
   const evalMs = performance.now() - tEval;
@@ -363,7 +363,7 @@ function shortLabel(point) {
 }
 
 function renderResult(ev, { compact = false } = {}) {
-  const labels = { pass: "✓ Correct", partial: "~ Partiel", miss: "✗ À revoir" };
+  const labels = { pass: "✓ Correct", partial: "~ Almost", miss: "✗ Not quite" };
   ui.ovVerdict.textContent = labels[ev.verdict] || ev.verdict;
   ui.ovVerdict.className = ev.verdict;
   ui.ovPoints.innerHTML = "";
@@ -449,7 +449,7 @@ async function handleVerdict(ev, wasFollowup, evalMs = 0) {
   ui.replayBtn.classList.remove("hidden");
   ui.continueBtn.classList.remove("hidden");
   await Voice.speak(ev.feedback);
-  ui.ovStatus.textContent = "Je reformule";
+  ui.ovStatus.textContent = "Let me rephrase";
   ui.ovStatus.classList.add("thinking");
   let rx;
   try {
@@ -518,7 +518,7 @@ async function showRecap() {
   state = "idle";
   const answered = results.filter((r) => r.verdict !== "skipped");
   const passed = answered.filter((r) => r.verdict === "pass").length;
-  ui.recapScore.textContent = `Vous avez réussi ${passed}/${answered.length} checkpoints.`;
+  ui.recapScore.textContent = `You nailed ${passed}/${answered.length} checkpoints.`;
   ui.recapList.innerHTML = "";
   for (const r of results) {
     const li = document.createElement("li");
@@ -531,7 +531,7 @@ async function showRecap() {
     const repeat = (recap.weak_spots || []).filter((w) => w.count >= 2);
     if (repeat.length) {
       ui.recapWeak.textContent =
-        "Point faible récurrent : " +
+        "Recurring weak spot: " +
         repeat.map((w) => `${w.point} (${w.count}×)`).join(" · ");
     }
   } catch { /* recap works without history */ }
@@ -540,9 +540,9 @@ async function showRecap() {
     const total = (s.prompt_tokens || 0) + (s.completion_tokens || 0);
     const saved = (s.prompt_tokens / 1e6) * 2.5 + (s.completion_tokens / 1e6) * 10;
     ui.recapLocal.textContent =
-      `🔒 ${s.calls} appels Gemma 4 · ${total.toLocaleString("fr-FR")} tokens traités ` +
-      `sur cette machine — 0,00 € d'API cloud (≈ $${saved.toFixed(2)} évités), ` +
-      `et votre profil d'apprentissage n'a jamais quitté ce disque.`;
+      `🔒 ${s.calls} Gemma 4 calls · ${total.toLocaleString("en-US")} tokens processed ` +
+      `on this machine — $0.00 of cloud API (≈ $${saved.toFixed(2)} avoided), ` +
+      `and your learning profile never left this disk.`;
   } catch { /* stats optional */ }
   ui.recap.classList.remove("hidden");
   ui.recap.scrollIntoView({ behavior: "smooth" });

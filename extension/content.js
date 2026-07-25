@@ -91,7 +91,7 @@ async function listen(onEnd) {
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch {
-    setStatus("Micro refusé — répondez au clavier.");
+    setStatus("Mic denied — type instead.");
     ui.typeInput.focus();
     return;
   }
@@ -275,12 +275,12 @@ function ensurePanel() {
     <div class="reexplain hidden"></div>
     <div class="controls">
       <span class="micdot hidden"></span>
-      <button class="done hidden">J'ai fini de parler</button>
-      <input type="text" class="type" placeholder="Votre réponse…">
-      <button class="send primary">Envoyer</button>
-      <button class="replay hidden">↺ Revoir ce passage</button>
-      <button class="continue primary hidden">Continuer ▸</button>
-      <button class="skip ghost">Passer</button>
+      <button class="done hidden">I'm done speaking</button>
+      <input type="text" class="type" placeholder="Your answer…">
+      <button class="send primary">Send</button>
+      <button class="replay hidden">↺ Watch that part again</button>
+      <button class="continue primary hidden">Continue ▸</button>
+      <button class="skip ghost">Skip</button>
     </div>
     <div class="status"></div>`;
   proot.appendChild(panel);
@@ -358,8 +358,8 @@ function renderDots() {
       border-radius:50%; background:${color}; border:2px solid rgba(0,0,0,.6);
       z-index:100; pointer-events:auto; cursor:pointer;`;
     dot.title = cp.status === "pending"
-      ? `Question à ${fmtTime(cp.t_pause)} — ${cp.concept}`
-      : `Rejouer cette question — ${cp.concept}`;
+      ? `Question at ${fmtTime(cp.t_pause)} — ${cp.concept}`
+      : `Replay this question — ${cp.concept}`;
     // Auto = one-shot ; clic = re-test volontaire. On intercepte mousedown/click
     // pour que le clic sur la pastille ne déclenche PAS le seek de YouTube.
     for (const evt of ["mousedown", "mouseup", "click"]) {
@@ -387,7 +387,7 @@ async function toggle() {
   const vid = new URL(location.href).searchParams.get("v");
   if (!vid) return;
   state = "building";
-  ui.fab.textContent = "⏳ Préparation…";
+  ui.fab.textContent = "⏳ Preparing…";
   ui.fab.style.background = "#f4b942";
   try {
     const base = await api("/api/stats").catch(() => null);
@@ -404,7 +404,7 @@ async function toggle() {
     ui.fab.textContent = "🦉 Socratic";
     ui.fab.style.background = "#4f8cff";
     state = "idle";
-    alert(`Socratic : backend injoignable ou erreur.\n${e.message}\nLancez ./scripts/serve_app.sh`);
+    alert(`Socratic: backend unreachable.\n${e.message}\nRun ./scripts/serve_app.sh`);
     return;
   }
   cps = session.checkpoints.map((c) => ({ ...c, status: "pending" }));
@@ -455,11 +455,11 @@ function startCountdown(cp) {
   state = "countdown";
   let n = 3;
   ui.badge.classList.remove("hidden");
-  ui.badge.textContent = `Question dans ${n}…`;
+  ui.badge.textContent = `Question in ${n}…`;
   const id = setInterval(() => {
     n -= 1;
     if (n <= 0) { clearInterval(id); ui.badge.classList.add("hidden"); fire(cp); }
-    else ui.badge.textContent = `Question dans ${n}…`;
+    else ui.badge.textContent = `Question in ${n}…`;
   }, 1000);
 }
 
@@ -498,15 +498,15 @@ function startListening() {
     ui.typeInput.focus();
     return;
   }
-  if (!micSupported()) { setStatus("Micro indisponible — clavier."); ui.typeInput.focus(); return; }
+  if (!micSupported()) { setStatus("Mic unavailable — type instead."); ui.typeInput.focus(); return; }
   state = "listening";
   ui.micDot.classList.remove("hidden");
   ui.doneBtn.classList.remove("hidden");
-  setStatus("Je vous écoute…");
+  setStatus("Listening…");
   listen(async (blob) => {
     ui.micDot.classList.add("hidden");
     ui.doneBtn.classList.add("hidden");
-    setStatus("Transcription…");
+    setStatus("Transcribing…");
     let text = "";
     try {
       const fd = new FormData();
@@ -514,7 +514,7 @@ function startListening() {
       const r = await fetch(`${API}/api/stt`, { method: "POST", body: fd });
       if (r.ok) text = (await r.json()).text.trim();
     } catch { /* fall through */ }
-    if (!text) { setStatus("Rien entendu — clavier ?"); ui.typeInput.focus(); return; }
+    if (!text) { setStatus("Didn't catch that — try typing?"); ui.typeInput.focus(); return; }
     submitAnswer(text);
   });
 }
@@ -532,9 +532,9 @@ async function submitAnswer(answer) {
   ui.micDot.classList.add("hidden");
   ui.doneBtn.classList.add("hidden");
   ui.typeInput.value = "";
-  ui.heard.textContent = `Vous avez dit : ${answer}`;
+  ui.heard.textContent = `You said: ${answer}`;
   ui.heard.classList.remove("hidden");
-  setStatus("Évaluation (Gemma 4, local)…");
+  setStatus("Grading (Gemma 4, on-device)…");
   speak(["Okay…", "Alright…", "Let me see…"][Math.floor(Math.random() * 3)]);
   const isFu = !!followup;
   let ev;
@@ -548,14 +548,14 @@ async function submitAnswer(answer) {
       is_followup: isFu,
     });
   } catch {
-    setStatus("Évaluation impossible — on continue.");
+    setStatus("Grading failed — moving on.");
     return setTimeout(() => finishCp("skipped"), 2000);
   }
   handleVerdict(ev, isFu);
 }
 
 function renderVerdict(ev, compact) {
-  const labels = { pass: "✓ Correct", partial: "~ Partiel", miss: "✗ À revoir" };
+  const labels = { pass: "✓ Correct", partial: "~ Almost", miss: "✗ Not quite" };
   ui.verdict.textContent = labels[ev.verdict] || ev.verdict;
   ui.verdict.className = `verdict ${ev.verdict}`;
   ui.verdict.classList.remove("hidden");
@@ -618,7 +618,7 @@ async function handleVerdict(ev, wasFollowup) {
   ui.replayBtn.classList.remove("hidden");
   ui.continueBtn.classList.remove("hidden");
   await speak(ev.feedback);
-  setStatus("Je reformule…");
+  setStatus("Let me rephrase…");
   let rx;
   try { rx = await rxP; } catch { return setTimeout(() => finishCp("miss"), 2000); }
   if (!currentCp) return; // barge-in already resumed

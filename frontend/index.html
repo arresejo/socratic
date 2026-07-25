@@ -1,37 +1,37 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Socratic — la vidéo qui vous interroge</title>
+  <title>Socratic — the video that quizzes you back</title>
   <link rel="icon" type="image/svg+xml" href="socratic-glyph.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header>
     <h1><img src="socratic-glyph.svg" alt="" class="logo">Socratic</h1>
-    <p class="tagline">La vidéo qui vous interroge.</p>
+    <p class="tagline">The video that quizzes you back.</p>
   </header>
 
   <section id="setup">
     <div class="row">
-      <input id="url" type="text" placeholder="URL YouTube…" autocomplete="off">
-      <select id="intensity" title="Intensité">
+      <input id="url" type="text" placeholder="YouTube URL…" autocomplete="off">
+      <select id="intensity" title="Intensity">
         <option value="normal" selected>Normal (5–7 questions/h)</option>
-        <option value="light">Léger (~3 questions/h)</option>
+        <option value="light">Light (~3 questions/h)</option>
       </select>
-      <button id="build">Lancer la session</button>
+      <button id="build">Start session</button>
     </div>
     <div class="row">
       <input id="background" type="text"
-             placeholder="Votre profil en une ligne (optionnel — ex. « dev python, débutant en ML »)">
+             placeholder="One-line profile (optional — e.g. “python dev, new to ML”)">
     </div>
     <div id="status" class="hidden"></div>
   </section>
 
   <section id="stage" class="hidden">
     <h2 id="videoTitle"></h2>
-    <div id="localBadge">🔒 Inférence 100 % locale — vos réponses ne quittent jamais cette machine</div>
+    <div id="localBadge">🔒 100% on-device inference — your answers never leave this machine</div>
     <div id="playerWrap">
       <div id="player"></div>
       <div id="countdown" class="hidden"></div>
@@ -47,14 +47,14 @@
         </div>
         <div id="ovReexplain" class="hidden"></div>
         <div class="controls">
-          <button id="micDone" class="hidden">J’ai fini de parler</button>
+          <button id="micDone" class="hidden">I'm done speaking</button>
           <form id="typeForm">
-            <input id="typeInput" type="text" placeholder="…ou répondez au clavier" autocomplete="off">
-            <button type="submit">Envoyer</button>
+            <input id="typeInput" type="text" placeholder="…or type your answer" autocomplete="off">
+            <button type="submit">Send</button>
           </form>
-          <button id="replayBtn" class="hidden">↺ Revoir ce passage</button>
-          <button id="continueBtn" class="hidden">Continuer ▸</button>
-          <button id="skipBtn" class="ghost">Passer</button>
+          <button id="replayBtn" class="hidden">↺ Watch that part again</button>
+          <button id="continueBtn" class="hidden">Continue ▸</button>
+          <button id="skipBtn" class="ghost">Skip</button>
         </div>
         <div id="ovStatus"></div>
       </div>
@@ -66,7 +66,7 @@
   </section>
 
   <section id="recap" class="hidden">
-    <h2>Récap de session</h2>
+    <h2>Session recap</h2>
     <div id="recapScore"></div>
     <ul id="recapList"></ul>
     <div id="recapWeak"></div>
