@@ -2,7 +2,7 @@
 
 import re
 
-from backend.llm import chat_json
+from backend.llm import chat_json, plain_text
 from backend.schemas import Checkpoint, Evaluation, Session
 
 SYSTEM_PROMPT = """You evaluate a learner's spoken answer to a comprehension question.
@@ -79,6 +79,7 @@ def evaluate(
         result = chat_json(SYSTEM_PROMPT, user, _validate, temperature=0.1,
                            max_tokens=2048, think=True)
         _enforce_evidence(result, answer)
+    result.feedback = plain_text(result.feedback)
     return result
 
 

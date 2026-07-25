@@ -154,6 +154,13 @@ const CSS = `
   color: #f1f1f1; border: 1px solid rgba(255,255,255,.1); border-radius: 999px;
   padding: 8px 16px; font-size: 13px; font-weight: 500; pointer-events: none;
 }
+@keyframes sk-spin { to { transform: rotate(360deg); } }
+.sk-spin {
+  display: inline-block; width: 12px; height: 12px;
+  border: 2px solid rgba(255,255,255,.25); border-top-color: #3ea6ff;
+  border-radius: 50%; animation: sk-spin .8s linear infinite;
+  vertical-align: -2px; margin-right: 8px;
+}
 @keyframes sk-in {
   from { opacity: 0; transform: translate(-50%, 14px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
@@ -225,6 +232,14 @@ function buildOverlay() {
 
   const fab = el("button", "socratic-fab", "");
   fab.innerHTML = `${GLYPH}Socratic`;
+  // Le spinner du FAB vit dans le shadow root externe : il lui faut ses keyframes.
+  const fabStyle = document.createElement("style");
+  fabStyle.textContent = `@keyframes sk-spin { to { transform: rotate(360deg); } }
+    .sk-spin { display:inline-block; width:12px; height:12px;
+      border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
+      border-radius:50%; animation: sk-spin .8s linear infinite;
+      vertical-align:-2px; margin-right:8px; }`;
+  root.appendChild(fabStyle);
   // Styles inline : résiste aux filtres cosmétiques des adblockers et à toute
   // interférence de stylesheet (cause avérée de FAB invisible chez certains profils).
   fab.style.cssText = `position:fixed !important; bottom:24px; right:24px;
@@ -325,7 +340,9 @@ function el(tag, cls, text) {
   return e;
 }
 
-function setStatus(msg) { ui.status.textContent = msg || ""; }
+function setStatus(msg, busy = false) {
+  ui.status.innerHTML = busy ? `<span class="sk-spin"></span>${msg}` : (msg || "");
+}
 
 function resetPanel() {
   for (const k of ["heard", "verdict", "feedback", "reexplain", "replayBtn", "continueBtn", "doneBtn", "micDot"]) {
@@ -387,7 +404,7 @@ async function toggle() {
   const vid = new URL(location.href).searchParams.get("v");
   if (!vid) return;
   state = "building";
-  ui.fab.textContent = "⏳ Preparing…";
+  ui.fab.innerHTML = `<span class="sk-spin"></span>Preparing…`;
   ui.fab.style.background = "#f4b942";
   try {
     const base = await api("/api/stats").catch(() => null);
@@ -395,20 +412,20 @@ async function toggle() {
       try {
         const s = await api("/api/stats");
         const tok = s.prompt_tokens + s.completion_tokens - base.prompt_tokens - base.completion_tokens;
-        if (tok > 0) ui.fab.textContent = `⏳ Gemma 4 · ${tok.toLocaleString()} tokens (local)`;
+        if (tok > 0) ui.fab.innerHTML = `<span class="sk-spin"></span>Gemma 4 · ${tok.toLocaleString()} tokens (local)`;
       } catch { /* transient */ }
     }, 1500);
     session = await api("/api/session", { url: location.href });
     if (ticker) clearInterval(ticker);
   } catch (e) {
-    ui.fab.textContent = "🦉 Socratic";
+    ui.fab.innerHTML = `${GLYPH}Socratic`;
     ui.fab.style.background = "#4f8cff";
     state = "idle";
     alert(`Socratic: backend unreachable.\n${e.message}\nRun ./scripts/serve_app.sh`);
     return;
   }
   cps = session.checkpoints.map((c) => ({ ...c, status: "pending" }));
-  ui.fab.textContent = `✓ Socratic — ${cps.length} checkpoints`;
+  ui.fab.innerHTML = `${GLYPH}✓ ${cps.length} checkpoints`;
   ui.fab.style.background = "#3ecf8e";
   ensurePanel();
   video = document.querySelector("video");
@@ -426,7 +443,7 @@ function teardownSession() {
   removeDots();
   ui.panel.classList.add("hidden");
   ui.badge.classList.add("hidden");
-  ui.fab.textContent = "🦉 Socratic";
+  ui.fab.innerHTML = `${GLYPH}Socratic`;
   ui.fab.style.background = "#4f8cff";
   session = null; cps = []; currentCp = null; state = "idle";
 }
@@ -506,7 +523,7 @@ function startListening() {
   listen(async (blob) => {
     ui.micDot.classList.add("hidden");
     ui.doneBtn.classList.add("hidden");
-    setStatus("Transcribing…");
+    setStatus("Transcribing…", true);
     let text = "";
     try {
       const fd = new FormData();
@@ -534,7 +551,7 @@ async function submitAnswer(answer) {
   ui.typeInput.value = "";
   ui.heard.textContent = `You said: ${answer}`;
   ui.heard.classList.remove("hidden");
-  setStatus("Grading (Gemma 4, on-device)…");
+  setStatus("Grading (Gemma 4, on-device)…", true);
   speak(["Okay…", "Alright…", "Let me see…"][Math.floor(Math.random() * 3)]);
   const isFu = !!followup;
   let ev;
@@ -618,7 +635,7 @@ async function handleVerdict(ev, wasFollowup) {
   ui.replayBtn.classList.remove("hidden");
   ui.continueBtn.classList.remove("hidden");
   await speak(ev.feedback);
-  setStatus("Let me rephrase…");
+  setStatus("Let me rephrase…", true);
   let rx;
   try { rx = await rxP; } catch { return setTimeout(() => finishCp("miss"), 2000); }
   if (!currentCp) return; // barge-in already resumed

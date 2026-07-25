@@ -1,16 +1,17 @@
 """Re-explainer + follow-up question generation (SPEC §2.5)."""
 
-from backend.llm import chat
+from backend.llm import chat, plain_text
 
 REEXPLAIN_SYSTEM = (
     "You are a patient tutor. Spoken style. Answer in the same language as the "
-    "passage. Output only the re-explanation text, nothing else."
+    "passage. Output only the re-explanation text, nothing else. "
+    "Plain text only — never use markdown, asterisks or bullet points."
 )
 
 FOLLOWUP_SYSTEM = (
     "You write ONE short follow-up question for a live tutoring session. "
     "Spoken style, same language as the original question. "
-    "Output only the question, nothing else."
+    "Output only the question, nothing else. Plain text — no markdown."
 )
 
 
@@ -23,7 +24,7 @@ def reexplain(source: str, missed_points: list[str], profile_summary: str = "") 
         f"Passage: {source}\n"
         f"What they got wrong: {'; '.join(missed_points) or 'the core idea'}"
     )
-    return chat(REEXPLAIN_SYSTEM, user, temperature=0.6, max_tokens=2048).strip()
+    return plain_text(chat(REEXPLAIN_SYSTEM, user, temperature=0.6, max_tokens=2048))
 
 
 def followup_question(source: str, question: str, weak_point: str) -> str:
@@ -34,4 +35,4 @@ def followup_question(source: str, question: str, weak_point: str) -> str:
         'Ask ONE short targeted follow-up probing exactly that point, in the '
         'style of: "and what did he say about X?"'
     )
-    return chat(FOLLOWUP_SYSTEM, user, temperature=0.4, max_tokens=1024).strip().strip('"')
+    return plain_text(chat(FOLLOWUP_SYSTEM, user, temperature=0.4, max_tokens=1024)).strip('"')

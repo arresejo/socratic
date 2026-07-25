@@ -82,6 +82,14 @@ def chat(system: str, user: str, temperature: float = 0.2, max_tokens: int = 409
     return content
 
 
+def plain_text(text: str) -> str:
+    """Spoken-style outputs must be plain text: models sometimes slip markdown
+    (*emphasis*, `code`, bullets) that pollutes both the card and the TTS."""
+    text = re.sub(r"[*_`#]+", "", text)
+    text = re.sub(r"^\s*[-•]\s+", "", text, flags=re.MULTILINE)
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
+
+
 def extract_json(text: str):
     """Best-effort JSON extraction: raw, fenced, or first {...} / [...] slice."""
     text = text.strip()
