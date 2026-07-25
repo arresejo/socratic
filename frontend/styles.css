@@ -102,8 +102,7 @@ button.ghost { background: transparent; border: 1px solid #2a3342; color: var(--
   font-weight: 400;
   color: var(--muted);
 }
-#overlay[data-state="feedback"] #ovVerdict,
-#overlay[data-state="reexplain"] #ovVerdict { font-size: 22px; }
+/* (le chip verdict porte sa propre hiérarchie — pas d'agrandissement) */
 
 /* Passer n'a de sens que pendant question/écoute */
 #overlay[data-state="evaluating"] #skipBtn,
@@ -115,10 +114,15 @@ button.ghost { background: transparent; border: 1px solid #2a3342; color: var(--
 #ovHeard { color: var(--muted); font-style: italic; }
 #ovHeard::before { content: "Vous avez dit : "; font-style: normal; }
 
-#ovVerdict { font-weight: 700; font-size: 17px; margin-bottom: 6px; }
-#ovVerdict.pass { color: var(--pass); }
-#ovVerdict.partial { color: var(--partial); }
-#ovVerdict.miss { color: var(--miss); }
+#ovVerdict {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px; width: fit-content;
+  font-size: 14px; font-weight: 600; margin-bottom: 6px;
+}
+#ovVerdict::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+#ovVerdict.pass { background: rgba(62, 207, 142, .15); color: var(--pass); }
+#ovVerdict.partial { background: rgba(244, 185, 66, .12); color: var(--partial); }
+#ovVerdict.miss { background: rgba(240, 97, 109, .13); color: var(--miss); }
 
 #ovPoints { list-style: none; margin: 0 0 6px; padding: 0; }
 #ovPoints li { padding: 2px 0; font-size: 14px; }

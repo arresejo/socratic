@@ -188,8 +188,15 @@ const CSS = `
   font-size: 13px; font-weight: 400; color: #aaa;
 }
 .heard { color: #aaa; font-size: 13px; font-style: italic; }
-.verdict { font-weight: 700; font-size: 16px; }
-.verdict.pass { color: #2ba640; } .verdict.partial { color: #ffd600; } .verdict.miss { color: #ff4e45; }
+.verdict {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px; width: fit-content;
+  font-size: 13px; font-weight: 600; letter-spacing: .2px;
+}
+.verdict::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.verdict.pass { background: rgba(43,166,64,.16); color: #6fdc8c; }
+.verdict.partial { background: rgba(255,214,0,.10); color: #ffd600; }
+.verdict.miss { background: rgba(255,78,69,.13); color: #ff8a84; }
 .points { list-style: none; margin: 0; padding: 0; font-size: 13px; line-height: 1.5; }
 .points li.covered { color: #2ba640; } .points li.partial { color: #ffd600; } .points li.missed { color: #ff4e45; }
 .feedback { background: rgba(255,255,255,.06); border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
@@ -572,7 +579,7 @@ async function submitAnswer(answer) {
 }
 
 function renderVerdict(ev, compact) {
-  const labels = { pass: "✓ Correct", partial: "~ Almost", miss: "✗ Not quite" };
+  const labels = { pass: "Correct", partial: "Almost there", miss: "Not quite" };
   ui.verdict.textContent = labels[ev.verdict] || ev.verdict;
   ui.verdict.className = `verdict ${ev.verdict}`;
   ui.verdict.classList.remove("hidden");

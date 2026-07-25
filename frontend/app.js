@@ -363,7 +363,7 @@ function shortLabel(point) {
 }
 
 function renderResult(ev, { compact = false } = {}) {
-  const labels = { pass: "✓ Correct", partial: "~ Almost", miss: "✗ Not quite" };
+  const labels = { pass: "Correct", partial: "Almost there", miss: "Not quite" };
   ui.ovVerdict.textContent = labels[ev.verdict] || ev.verdict;
   ui.ovVerdict.className = ev.verdict;
   ui.ovPoints.innerHTML = "";
