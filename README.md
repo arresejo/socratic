@@ -16,8 +16,8 @@ Kokoro (TTS). After the transcript fetch, no data leaves your disk.
   answers, hesitations, knowledge gaps, stored in an append-only local profile.
   Nobody wants that in a cloud.
 - **Unlimited questioning, $0** — a one-hour lecture means dozens of LLM calls
-  (segmentation, grading, re-explanation). Local inference makes it free; the
-  session recap shows the tokens processed locally and the API cost avoided.
+  (segmentation, grading, re-explanation). Local inference makes it free,
+  forever — no metered bill on your curiosity.
 - **Latency** — precomputed checkpoints (0 ms at pause time), question audio
   pre-synthesized at build time, answer→verdict ≈ 5 s all-local.
 
@@ -46,6 +46,17 @@ YouTube URL → transcript (youtube-transcript-api, whisper.cpp fallback)
            → local profile (append-only JSONL) → session recap
 ```
 
+## Two clients
+
+- **Web app** (`frontend/`) — served by the backend at `http://localhost:8123`;
+  YouTube iframe + full voice loop.
+- **Chrome extension** (`extension/`) — injects the whole Socratic loop into the
+  **real YouTube player**: checkpoint dots rendered directly on the progress bar
+  (chapter-aware), auto-pause + spoken question in a lower-third card, verdict
+  chips, click a dot to retry, end-of-session report with weak spots first.
+  Load it via `chrome://extensions` → Developer mode → "Load unpacked" → select
+  `extension/` (the backend must be running).
+
 ## Run it
 
 ```bash
@@ -73,8 +84,13 @@ Env overrides: `SOCRATIC_LLM_BASE` (default native ollama `localhost:11434`),
    replay the exact passage.
 4. Try answering "explain me" or nonsense — the evidence-enforced evaluator
    won't be gamed.
-5. End recap: score, recurring weak spots, and the edge proof line (tokens
-   processed locally, cloud cost avoided).
+5. End recap: score per checkpoint, recurring weak spots, one click to replay
+   any moment.
+
+## Demo video
+
+The 2-minute submission video is assembled with [Remotion](https://www.remotion.dev)
+from the sources in `demo/` (screen captures are not tracked in git).
 
 ## Spec
 
