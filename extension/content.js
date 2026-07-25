@@ -154,6 +154,10 @@ const CSS = `
   color: #f1f1f1; border: 1px solid rgba(255,255,255,.1); border-radius: 999px;
   padding: 8px 16px; font-size: 13px; font-weight: 500; pointer-events: none;
 }
+@keyframes sk-in {
+  from { opacity: 0; transform: translate(-50%, 14px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
 .panel {
   position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%);
   z-index: 2100; width: min(720px, calc(100% - 48px));
@@ -164,9 +168,15 @@ const CSS = `
   display: flex; flex-direction: column; gap: 10px;
   box-shadow: 0 12px 40px rgba(0,0,0,.55);
   pointer-events: auto;
+  animation: sk-in .28s cubic-bezier(.2,.7,.3,1);
 }
-.concept { color: #aaa; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 500; }
-.question { font-size: 17px; font-weight: 500; line-height: 1.45; }
+.brand {
+  display: flex; align-items: center; gap: 6px;
+  color: #aaa; font-size: 11px; font-weight: 500;
+  letter-spacing: 1.2px; text-transform: uppercase;
+}
+.brand .progress { margin-left: auto; color: #717171; letter-spacing: 0; }
+.question { font-size: 18px; font-weight: 500; line-height: 1.45; }
 .panel[data-state="feedback"] .question, .panel[data-state="reexplain"] .question {
   font-size: 13px; font-weight: 400; color: #aaa;
 }
@@ -198,6 +208,13 @@ input[type="text"]:focus { border-color: #3ea6ff; }
 .micdot { width: 10px; height: 10px; border-radius: 50%; background: #3a4556; display: inline-block; transition: background .15s; }
 .micdot.live { background: #ff4e45; box-shadow: 0 0 8px rgba(255,78,69,.8); }
 .hidden { display: none !important; }
+/* Un seul jeu de contrôles pertinent par état — jamais d'action hors contexte. */
+.panel[data-state="evaluating"] .type, .panel[data-state="evaluating"] .send,
+.panel[data-state="feedback"] .type,   .panel[data-state="feedback"] .send,
+.panel[data-state="reexplain"] .type,  .panel[data-state="reexplain"] .send,
+.panel[data-state="evaluating"] .skip,
+.panel[data-state="feedback"] .skip,
+.panel[data-state="reexplain"] .skip { display: none; }
 `;
 
 function buildOverlay() {
@@ -249,7 +266,7 @@ function ensurePanel() {
 
   const panel = el("div", "panel hidden", "");
   panel.innerHTML = `
-    <div class="concept"></div>
+    <div class="brand">${GLYPH}<span>Socratic</span><span class="progress"></span></div>
     <div class="question"></div>
     <div class="heard hidden"></div>
     <div class="verdict hidden"></div>
@@ -259,7 +276,7 @@ function ensurePanel() {
     <div class="controls">
       <span class="micdot hidden"></span>
       <button class="done hidden">J'ai fini de parler</button>
-      <input type="text" class="type" placeholder="…ou répondez au clavier">
+      <input type="text" class="type" placeholder="Votre réponse…">
       <button class="send primary">Envoyer</button>
       <button class="replay hidden">↺ Revoir ce passage</button>
       <button class="continue primary hidden">Continuer ▸</button>
@@ -270,7 +287,7 @@ function ensurePanel() {
 
   Object.assign(ui, {
     badge, panel,
-    concept: panel.querySelector(".concept"),
+    progress: panel.querySelector(".progress"),
     question: panel.querySelector(".question"),
     heard: panel.querySelector(".heard"),
     verdict: panel.querySelector(".verdict"),
@@ -456,7 +473,8 @@ async function fire(cp) {
   followup = null;
   followupUsed = false;
   resetPanel();
-  ui.concept.textContent = cp.concept;
+  // Pas de label de concept : il paraphrase souvent la réponse (anti-spoiler).
+  ui.progress.textContent = `Question ${cps.indexOf(cp) + 1}/${cps.length}`;
   ui.question.textContent = cp.question;
   ui.panel.dataset.state = "question";
   ui.panel.classList.remove("hidden");
@@ -477,7 +495,6 @@ function pauseGuard() {
 
 function startListening() {
   if (!MIC_ENABLED) {
-    setStatus("Répondez au clavier ⤵");
     ui.typeInput.focus();
     return;
   }
@@ -511,6 +528,7 @@ function submitTyped() {
 
 async function submitAnswer(answer) {
   state = "evaluating";
+  ui.panel.dataset.state = "evaluating";
   ui.micDot.classList.add("hidden");
   ui.doneBtn.classList.add("hidden");
   ui.typeInput.value = "";
@@ -542,13 +560,16 @@ function renderVerdict(ev, compact) {
   ui.verdict.className = `verdict ${ev.verdict}`;
   ui.verdict.classList.remove("hidden");
   ui.points.innerHTML = "";
-  for (const [point, res] of Object.entries(ev.points || {})) {
-    const li = document.createElement("li");
-    li.className = res.status;
-    const mark = { covered: "✓", partial: "~", missed: "✗" }[res.status] || "•";
-    const words = point.split(/\s+/);
-    li.textContent = `${mark} ${compact && words.length > 7 ? words.slice(0, 7).join(" ") + "…" : point}`;
-    ui.points.appendChild(li);
+  // Sur un miss : pas de liste de critères (tronqués = illisibles, complets =
+  // réponse servie d'un bloc) — la ré-explication porte le contenu.
+  if (!compact) {
+    for (const [point, res] of Object.entries(ev.points || {})) {
+      const li = document.createElement("li");
+      li.className = res.status;
+      const mark = { covered: "✓", partial: "~", missed: "✗" }[res.status] || "•";
+      li.textContent = `${mark} ${point}`;
+      ui.points.appendChild(li);
+    }
   }
   if (ev.verdict !== "miss" && ev.feedback) {
     ui.feedback.textContent = ev.feedback;
