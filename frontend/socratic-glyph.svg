@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 105 250 290" width="250" height="290">
+  <!-- glyph-only, transparent background: for favicon / Chrome toolbar / light surfaces -->
+  <rect x="162" y="135" width="50" height="230" rx="25" fill="#1c2350"/>
+  <path d="M 240 190 A 55 55 0 1 1 295 245 L 295 272"
+        fill="none" stroke="#1c2350" stroke-width="50" stroke-linecap="round"/>
+  <circle cx="295" cy="338" r="27" fill="#f5b942"/>
+</svg>

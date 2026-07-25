@@ -8,6 +8,14 @@
 
 const API = "http://127.0.0.1:8123";
 
+// Réglages démo : micro coupé (réponses clavier), activation automatique à
+// l'ouverture d'une vidéo. Basculer ici pour réactiver la boucle vocale.
+const MIC_ENABLED = false;
+const AUTO_START = true;
+
+// Le logo glyphe, inliné (blanc, pour le FAB bleu).
+const GLYPH = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 105 250 290" width="16" height="18" style="vertical-align:-3px;margin-right:6px"><rect x="162" y="135" width="50" height="230" rx="25" fill="#fff"/><path d="M 240 190 A 55 55 0 1 1 295 245 L 295 272" fill="none" stroke="#fff" stroke-width="50" stroke-linecap="round"/><circle cx="295" cy="338" r="27" fill="#f5b942"/></svg>`;
+
 let session = null;
 let cps = [];
 let state = "idle"; // idle|building|watching|countdown|question|listening|evaluating|feedback|reexplain
@@ -49,16 +57,25 @@ async function playUrl(url) {
   });
 }
 
+// Cache local des synthèses : un texte déjà prononcé (acks, feedbacks répétés)
+// rejoue instantanément au lieu de repasser par Kokoro (~1s de synthèse).
+const ttsCache = new Map();
+
 async function speak(text) {
   if (!text) return;
   try {
-    const r = await fetch(`${API}/api/tts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    if (!r.ok) return;
-    await playUrl(URL.createObjectURL(await r.blob()));
+    let blobUrl = ttsCache.get(text);
+    if (!blobUrl) {
+      const r = await fetch(`${API}/api/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!r.ok) return;
+      blobUrl = URL.createObjectURL(await r.blob());
+      ttsCache.set(text, blobUrl);
+    }
+    await playUrl(blobUrl);
   } catch { /* TTS down — text-only */ }
 }
 
@@ -189,7 +206,8 @@ function buildOverlay() {
   document.documentElement.appendChild(host);
   root = host.attachShadow({ mode: "open" });
 
-  const fab = el("button", "socratic-fab", "🦉 Socratic");
+  const fab = el("button", "socratic-fab", "");
+  fab.innerHTML = `${GLYPH}Socratic`;
   // Styles inline : résiste aux filtres cosmétiques des adblockers et à toute
   // interférence de stylesheet (cause avérée de FAB invisible chez certains profils).
   fab.style.cssText = `position:fixed !important; bottom:24px; right:24px;
@@ -458,6 +476,11 @@ function pauseGuard() {
 }
 
 function startListening() {
+  if (!MIC_ENABLED) {
+    setStatus("Répondez au clavier ⤵");
+    ui.typeInput.focus();
+    return;
+  }
   if (!micSupported()) { setStatus("Micro indisponible — clavier."); ui.typeInput.focus(); return; }
   state = "listening";
   ui.micDot.classList.remove("hidden");
@@ -606,10 +629,25 @@ function finishCp(verdict) {
 function boot() {
   if (root) return;
   buildOverlay();
+  maybeAutoStart();
+}
+
+function maybeAutoStart() {
+  if (!AUTO_START || state !== "idle") return;
+  if (!new URL(location.href).searchParams.get("v")) return;
+  // Attendre que le player existe avant d'armer la session.
+  const wait = setInterval(() => {
+    if (document.querySelector("video") && document.querySelector("#movie_player")) {
+      clearInterval(wait);
+      if (state === "idle") toggle();
+    }
+  }, 500);
+  setTimeout(() => clearInterval(wait), 15000); // abandon silencieux hors /watch
 }
 
 boot();
 window.addEventListener("yt-navigate-finish", () => {
   // Video changed (YouTube is a SPA): drop the session, keep the FAB.
   if (state !== "idle") teardownSession();
+  maybeAutoStart();
 });

@@ -21,7 +21,8 @@ body {
   font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-header h1 { margin: 0; font-size: 28px; letter-spacing: .5px; }
+header h1 { margin: 0; font-size: 28px; letter-spacing: .5px; display: flex; align-items: center; gap: 10px; }
+header .logo { height: 30px; filter: brightness(0) invert(1); }
 .tagline { margin: 2px 0 24px; color: var(--muted); }
 
 .hidden { display: none !important; }
