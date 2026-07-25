@@ -4,5 +4,10 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.venv-tts/
 *.wav
 .DS_Store
+
+# Documents de travail (pitch, notes) — pas du code produit
+pitch.md
+notes*.md
