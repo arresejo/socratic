@@ -487,8 +487,25 @@ async function toggle() {
   state = "watching";
   video.addEventListener("timeupdate", onTime);
   video.addEventListener("ended", showRecap);   // bilan au moment naturel
+  keepControlsVisible(true);
   if (video.duration) renderDots();
   else video.addEventListener("loadedmetadata", renderDots, { once: true });
+}
+
+/* Tant qu'une session est active, la barre de lecture reste visible : les
+ * pastilles Socratic sont une information permanente, pas un contrôle éphémère. */
+function keepControlsVisible(on) {
+  let s = document.getElementById("socratic-controls-style");
+  if (on && !s) {
+    s = document.createElement("style");
+    s.id = "socratic-controls-style";
+    s.textContent = `
+      .ytp-autohide .ytp-chrome-bottom,
+      .ytp-autohide .ytp-gradient-bottom { opacity: 1 !important; }`;
+    document.head.appendChild(s);
+  } else if (!on && s) {
+    s.remove();
+  }
 }
 
 /* Le FAB raconte l'état : progression pendant le visionnage, invitation à
@@ -516,6 +533,7 @@ function teardownSession() {
     video.removeEventListener("ended", showRecap);
   }
   window.removeEventListener("resize", renderDots);
+  keepControlsVisible(false);
   removeDots();
   ui.panel.classList.add("hidden");
   ui.badge.classList.add("hidden");
