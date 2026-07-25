@@ -4,6 +4,7 @@ The frontend never talks to the LLM directly: everything goes through here.
 Run:  uvicorn backend.main:app --host 127.0.0.1 --port 8123
 """
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Optional
@@ -87,15 +88,18 @@ def create_session(req: SessionRequest) -> Session:
     return session
 
 
-def _question_wav_path(video_id: str, checkpoint_id: str) -> Path:
-    return TTS_CACHE_DIR / video_id / f"{checkpoint_id}.wav"
+def _question_wav_path(video_id: str, checkpoint_id: str, question: str) -> Path:
+    # Content-addressed: sessions get regenerated with new questions — a cache
+    # keyed only by (video, cp_id) served STALE audio from previous builds.
+    digest = hashlib.md5(question.encode("utf-8")).hexdigest()[:10]
+    return TTS_CACHE_DIR / video_id / f"{checkpoint_id}-{digest}.wav"
 
 
 def _pregenerate_question_audio(session: Session) -> None:
     """Questions are known at build time → synthesize their audio now so the
     checkpoint voice is instant at pause time. Best-effort: TTS may be down."""
     for cp in session.checkpoints:
-        path = _question_wav_path(session.video_id, cp.id)
+        path = _question_wav_path(session.video_id, cp.id, cp.question)
         if path.exists():
             continue
         try:
@@ -108,10 +112,10 @@ def _pregenerate_question_audio(session: Session) -> None:
 
 @app.get("/api/tts/question/{video_id}/{checkpoint_id}")
 def tts_question(video_id: str, checkpoint_id: str):
-    path = _question_wav_path(video_id, checkpoint_id)
+    session = _load_session(video_id)
+    cp = _find_checkpoint(session, checkpoint_id)
+    path = _question_wav_path(video_id, checkpoint_id, cp.question)
     if not path.exists():
-        session = _load_session(video_id)
-        cp = _find_checkpoint(session, checkpoint_id)
         try:
             wav = synthesize(cp.question)
         except Exception as e:
