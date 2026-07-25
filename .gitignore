@@ -8,9 +8,10 @@ venv/
 *.wav
 .DS_Store
 
-# Documents de travail (pitch, notes) — pas du code produit
+# Documents de travail (pitch, notes, spec) — pas du code produit
 pitch.md
 notes*.md
+socratic-spec.md
 demo/node_modules/
 demo/out/
 demo/public/clips/

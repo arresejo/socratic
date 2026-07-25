@@ -87,12 +87,3 @@ Env overrides: `SOCRATIC_LLM_BASE` (default native ollama `localhost:11434`),
 5. End recap: score per checkpoint, recurring weak spots, one click to replay
    any moment.
 
-## Demo video
-
-The 2-minute submission video is assembled with [Remotion](https://www.remotion.dev)
-from the sources in `demo/` (screen captures are not tracked in git).
-
-## Spec
-
-The full product spec (architecture, prompts, milestones, edge cases) is in
-[socratic-spec.md](socratic-spec.md).
