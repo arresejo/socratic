@@ -11,3 +11,6 @@ venv/
 # Documents de travail (pitch, notes) — pas du code produit
 pitch.md
 notes*.md
+demo/node_modules/
+demo/out/
+demo/public/clips/
