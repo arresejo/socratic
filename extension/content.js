@@ -186,7 +186,15 @@ function buildOverlay() {
   style.textContent = CSS;
   root.appendChild(style);
 
-  const fab = el("button", "fab", "🦉 Socratic");
+  const fab = el("button", "socratic-fab", "🦉 Socratic");
+  // Styles inline : résiste aux filtres cosmétiques des adblockers et à toute
+  // interférence de stylesheet (cause avérée de FAB invisible chez certains profils).
+  fab.style.cssText = `position:fixed !important; bottom:24px; right:24px;
+    z-index:2147483647; background:#4f8cff; color:#fff; border:none;
+    border-radius:999px; padding:12px 18px; font-size:14px; font-weight:700;
+    cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.4);
+    display:block !important; visibility:visible !important; opacity:1 !important;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;`;
   fab.addEventListener("click", toggle);
   root.appendChild(fab);
 
@@ -265,6 +273,35 @@ function resetPanel() {
   setStatus("");
 }
 
+/* ---------- pastilles sur la vraie barre de lecture YouTube ---------- */
+
+const DOT_COLORS = {
+  pending: "#4f8cff", active: "#4f8cff", pass: "#3ecf8e",
+  partial: "#f4b942", miss: "#f0616d", skipped: "#4a5568",
+};
+
+function renderDots() {
+  const bar = document.querySelector(".ytp-progress-bar");
+  if (!bar || !video || !video.duration) return;
+  bar.querySelectorAll(".socratic-dot").forEach((d) => d.remove());
+  for (const cp of cps) {
+    const dot = document.createElement("div");
+    dot.className = "socratic-dot";
+    const color = DOT_COLORS[cp.verdict || cp.status] || DOT_COLORS.pending;
+    // Inline styles: résiste au CSS YouTube et aux adblockers.
+    dot.style.cssText = `position:absolute; top:50%;
+      left:${(cp.t_pause / video.duration) * 100}%;
+      transform:translate(-50%,-50%); width:13px; height:13px;
+      border-radius:50%; background:${color}; border:2px solid rgba(0,0,0,.6);
+      z-index:100; pointer-events:none;`;
+    bar.appendChild(dot);
+  }
+}
+
+function removeDots() {
+  document.querySelectorAll(".socratic-dot").forEach((d) => d.remove());
+}
+
 /* ---------- session ---------- */
 
 async function toggle() {
@@ -273,6 +310,7 @@ async function toggle() {
   if (!vid) return;
   state = "building";
   ui.fab.textContent = "⏳ Préparation…";
+  ui.fab.style.background = "#f4b942";
   try {
     const base = await api("/api/stats").catch(() => null);
     const ticker = base && setInterval(async () => {
@@ -286,27 +324,31 @@ async function toggle() {
     if (ticker) clearInterval(ticker);
   } catch (e) {
     ui.fab.textContent = "🦉 Socratic";
+    ui.fab.style.background = "#4f8cff";
     state = "idle";
     alert(`Socratic : backend injoignable ou erreur.\n${e.message}\nLancez ./scripts/serve_app.sh`);
     return;
   }
   cps = session.checkpoints.map((c) => ({ ...c, status: "pending" }));
   ui.fab.textContent = `✓ Socratic — ${cps.length} checkpoints`;
-  ui.fab.classList.add("on");
+  ui.fab.style.background = "#3ecf8e";
   video = document.querySelector("video");
   lastTime = video ? video.currentTime : 0;
   state = "watching";
   video.addEventListener("timeupdate", onTime);
+  if (video.duration) renderDots();
+  else video.addEventListener("loadedmetadata", renderDots, { once: true });
 }
 
 function teardownSession() {
   stopListening();
   stopSpeaking();
   if (video) video.removeEventListener("timeupdate", onTime);
+  removeDots();
   ui.panel.classList.add("hidden");
   ui.badge.classList.add("hidden");
   ui.fab.textContent = "🦉 Socratic";
-  ui.fab.classList.remove("on");
+  ui.fab.style.background = "#4f8cff";
   session = null; cps = []; currentCp = null; state = "idle";
 }
 
@@ -316,9 +358,14 @@ function onTime() {
   if (state !== "watching" || !video) return;
   const ct = video.currentTime;
   if (ct - lastTime > 3) {
+    let skipped = false;
     cps.forEach((cp) => {
-      if (cp.status === "pending" && cp.t_pause > lastTime && cp.t_pause <= ct) cp.status = "skipped";
+      if (cp.status === "pending" && cp.t_pause > lastTime && cp.t_pause <= ct) {
+        cp.status = "skipped";
+        skipped = true;
+      }
     });
+    if (skipped) renderDots();
   }
   lastTime = ct;
   const next = cps.find((c) => c.status === "pending");
@@ -488,10 +535,12 @@ async function handleVerdict(ev, wasFollowup) {
 function finishCp(verdict) {
   if (!currentCp) return;
   currentCp.status = "done";
+  currentCp.verdict = verdict;
   currentCp = null;
   followup = null;
   ui.panel.classList.add("hidden");
   state = "watching";
+  renderDots();
   if (video && verdict !== "replay") video.play();
 }
 
