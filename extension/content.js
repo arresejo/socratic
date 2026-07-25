@@ -219,16 +219,25 @@ input[type="text"] {
 }
 input[type="text"]:focus { border-color: #3ea6ff; }
 .status { color: #aaa; font-size: 13px; min-height: 17px; }
-.recap { display: flex; flex-direction: column; gap: 8px; }
-.recap-score { font-size: 16px; font-weight: 600; }
-.recap-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #ddd; }
-.recap-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.recap-time { color: #717171; font-variant-numeric: tabular-nums; }
+.recap { display: flex; flex-direction: column; gap: 12px; }
+.recap-score { font-size: 18px; font-weight: 600; }
+.recap-list {
+  display: flex; flex-direction: column; gap: 10px;
+  background: rgba(255,255,255,.04); border-radius: 10px; padding: 12px 16px;
+}
+.recap-row { display: flex; align-items: center; gap: 12px; font-size: 15px; color: #e8e8e8; }
+.recap-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.recap-time { color: #717171; font-variant-numeric: tabular-nums; font-size: 14px; }
 .recap-concept { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recap-verdict { color: #aaa; }
-.recap-weak { color: #ffd600; font-size: 13px; margin-top: 4px; }
-.recap-local { color: #6fdc8c; font-size: 13px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 10px; margin-top: 4px; }
-.recap-actions { display: flex; gap: 8px; margin-top: 6px; }
+.recap-verdict { font-weight: 600; font-size: 14px; }
+.recap-weak {
+  background: rgba(255,214,0,.07); border-left: 3px solid #ffd600;
+  border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5;
+}
+.recap-weak .rw-title { color: #ffd600; font-weight: 600; margin-bottom: 4px; }
+.recap-weak .rw-item { color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recap-local { color: #6fdc8c; font-size: 14px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; }
+.recap-actions { display: flex; gap: 8px; margin-top: 2px; }
 .panel[data-state="recap"] .controls { display: none; }
 .micdot { width: 10px; height: 10px; border-radius: 50%; background: #3a4556; display: inline-block; transition: background .15s; }
 .micdot.live { background: #ff4e45; box-shadow: 0 0 8px rgba(255,78,69,.8); }
@@ -738,30 +747,30 @@ async function showRecap() {
     return `<div class="recap-row"><span class="recap-dot" style="background:${color}"></span>` +
       `<span class="recap-time">${fmtTime(cp.t_pause)}</span>` +
       `<span class="recap-concept">${cp.concept}</span>` +
-      `<span class="recap-verdict">${labels[key] || key}</span></div>`;
+      `<span class="recap-verdict" style="color:${color}">${labels[key] || key}</span></div>`;
   }).join("");
 
   let extra = "";
   try { // points faibles récurrents (profil local, toutes sessions)
     const r = await api(`/api/recap?video_id=${encodeURIComponent(session.video_id)}`);
-    const repeat = (r.weak_spots || []).filter((w) => w.count >= 2).slice(0, 2);
+    const repeat = (r.weak_spots || []).filter((w) => w.count >= 2).slice(0, 3);
     if (repeat.length) {
-      extra += `<div class="recap-weak">Recurring weak spot: ${repeat
-        .map((w) => `${w.point} (${w.count}×)`).join(" · ")}</div>`;
+      extra += `<div class="recap-weak"><div class="rw-title">Recurring weak spots</div>` +
+        repeat.map((w) => `<div class="rw-item">${w.point} — ${w.count}×</div>`).join("") +
+        `</div>`;
     }
   } catch { /* optional */ }
-  try { // la preuve Edge, mesurée
+  try { // la preuve Edge, mesurée — privacy, pas d'argent
     const s = await api("/api/stats");
     const total = (s.prompt_tokens || 0) + (s.completion_tokens || 0);
-    const saved = (s.prompt_tokens / 1e6) * 2.5 + (s.completion_tokens / 1e6) * 10;
     extra += `<div class="recap-local">🔒 ${s.calls} Gemma 4 calls · ` +
-      `${total.toLocaleString("en-US")} tokens on this machine — $0.00 of cloud API ` +
-      `(≈ $${saved.toFixed(2)} avoided)</div>`;
+      `${total.toLocaleString("en-US")} tokens — all processed on this machine, ` +
+      `nothing ever left it</div>`;
   } catch { /* optional */ }
 
   ui.recap.innerHTML =
     `<div class="recap-score">You nailed ${passed}/${answered.length} answered questions</div>` +
-    rows + extra +
+    `<div class="recap-list">${rows}</div>` + extra +
     `<div class="recap-actions"><button class="rc-close primary">Keep watching ▸</button>` +
     `<button class="rc-off ghost">Turn Socratic off</button></div>`;
   ui.recap.querySelector(".rc-close").addEventListener("click", closeRecap);

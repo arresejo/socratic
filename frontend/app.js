@@ -535,14 +535,12 @@ async function showRecap() {
         repeat.map((w) => `${w.point} (${w.count}×)`).join(" · ");
     }
   } catch { /* recap works without history */ }
-  try { // l'argument Edge, mesuré : tokens traités localement, coût API évité
+  try { // l'argument Edge, mesuré : tokens traités localement, privacy
     const s = await api("/api/stats");
     const total = (s.prompt_tokens || 0) + (s.completion_tokens || 0);
-    const saved = (s.prompt_tokens / 1e6) * 2.5 + (s.completion_tokens / 1e6) * 10;
     ui.recapLocal.textContent =
-      `🔒 ${s.calls} Gemma 4 calls · ${total.toLocaleString("en-US")} tokens processed ` +
-      `on this machine — $0.00 of cloud API (≈ $${saved.toFixed(2)} avoided), ` +
-      `and your learning profile never left this disk.`;
+      `🔒 ${s.calls} Gemma 4 calls · ${total.toLocaleString("en-US")} tokens — ` +
+      `all processed on this machine, and your learning profile never left this disk.`;
   } catch { /* stats optional */ }
   ui.recap.classList.remove("hidden");
   ui.recap.scrollIntoView({ behavior: "smooth" });
