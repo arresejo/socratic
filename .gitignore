@@ -1,0 +1,8 @@
+# Local learning data — never leaves this machine (SPEC §5 privacy rule)
+data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.wav
+.DS_Store
