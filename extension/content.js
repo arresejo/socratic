@@ -528,6 +528,8 @@ async function fire(cp) {
   ui.panel.dataset.state = "question";
   ui.panel.classList.remove("hidden");
   state = "question";
+  // Focus immédiat : l'utilisateur peut taper pendant que la question est lue.
+  ui.typeInput.focus({ preventScroll: true });
   // Garde anti-reprise : si quoi que ce soit relance la vidéo pendant la
   // question (hotkey résiduel, autoplay), on la remet en pause.
   video.addEventListener("play", pauseGuard);
@@ -655,6 +657,7 @@ async function handleVerdict(ev, wasFollowup) {
     resetPanel();
     ui.question.textContent = fq.question;
     ui.panel.dataset.state = "question";
+    ui.typeInput.focus({ preventScroll: true });
     await speak(fq.question);
     startListening();
     return;
