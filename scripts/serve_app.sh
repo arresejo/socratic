@@ -28,4 +28,9 @@ if command -v whisper-server >/dev/null && ! curl -s -o /dev/null --max-time 1 h
   echo "[serve_app] whisper daemon starting (data/stt.log)"
 fi
 
-exec .venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8123 "$@"
+# Bind: 127.0.0.1 par défaut (règle privacy de la spec). Pour une démo depuis un
+# autre appareil du réseau local : SOCRATIC_HOST=0.0.0.0 ./scripts/serve_app.sh
+# (les démons LLM/TTS/STT restent sur localhost — seul le frontend est exposé).
+SOCRATIC_HOST="${SOCRATIC_HOST:-127.0.0.1}"
+
+exec .venv/bin/uvicorn backend.main:app --host "$SOCRATIC_HOST" --port 8123 "$@"
