@@ -756,27 +756,38 @@ async function showRecap() {
 
   const answered = cps.filter((c) => ["pass", "partial", "miss"].includes(c.verdict));
   const passed = answered.filter((c) => c.verdict === "pass").length;
+  const done = cps.filter((c) => c.verdict || c.status === "skipped").length;
   const labels = { pass: "Correct", partial: "Almost there", miss: "Not quite",
                    skipped: "Skipped", pending: "Upcoming", done: "Done" };
   const rows = cps.map((cp) => {
     const key = cp.verdict || cp.status;
     const color = DOT_COLORS[key] || DOT_COLORS.pending;
+    // Anti-spoiler : le concept d'une question pas encore posée reste masqué.
+    const concept = key === "pending"
+      ? `<span class="recap-concept" style="color:#717171;font-style:italic">Coming up…</span>`
+      : `<span class="recap-concept">${cp.concept}</span>`;
     return `<div class="recap-row"><span class="recap-dot" style="background:${color}"></span>` +
-      `<span class="recap-time">${fmtTime(cp.t_pause)}</span>` +
-      `<span class="recap-concept">${cp.concept}</span>` +
+      `<span class="recap-time">${fmtTime(cp.t_pause)}</span>` + concept +
       `<span class="recap-verdict" style="color:${color}">${labels[key] || key}</span></div>`;
   }).join("");
 
+  const next = cps.find((c) => c.status === "pending");
+  const score = answered.length === 0
+    ? `No questions answered yet${next ? ` — first one at ${fmtTime(next.t_pause)}` : ""}`
+    : `You nailed ${passed}/${answered.length} answered questions`;
+
   let extra = "";
-  try { // points faibles récurrents (profil local, toutes sessions)
-    const r = await api(`/api/recap?video_id=${encodeURIComponent(session.video_id)}`);
-    const repeat = (r.weak_spots || []).filter((w) => w.count >= 2).slice(0, 3);
-    if (repeat.length) {
-      extra += `<div class="recap-weak"><div class="rw-title">Recurring weak spots</div>` +
-        repeat.map((w) => `<div class="rw-item">${w.point} — ${w.count}×</div>`).join("") +
-        `</div>`;
-    }
-  } catch { /* optional */ }
+  if (done > 0) {
+    try { // points faibles récurrents (profil local, toutes sessions)
+      const r = await api(`/api/recap?video_id=${encodeURIComponent(session.video_id)}`);
+      const repeat = (r.weak_spots || []).filter((w) => w.count >= 2).slice(0, 3);
+      if (repeat.length) {
+        extra += `<div class="recap-weak"><div class="rw-title">Recurring weak spots</div>` +
+          repeat.map((w) => `<div class="rw-item">${w.point} — ${w.count}×</div>`).join("") +
+          `</div>`;
+      }
+    } catch { /* optional */ }
+  }
   try { // la preuve Edge, mesurée — privacy, pas d'argent
     const s = await api("/api/stats");
     const total = (s.prompt_tokens || 0) + (s.completion_tokens || 0);
@@ -786,7 +797,7 @@ async function showRecap() {
   } catch { /* optional */ }
 
   ui.recap.innerHTML =
-    `<div class="recap-score">You nailed ${passed}/${answered.length} answered questions</div>` +
+    `<div class="recap-score">${score}</div>` +
     `<div class="recap-list">${rows}</div>` + extra +
     `<div class="recap-actions"><button class="rc-close primary">Keep watching ▸</button>` +
     `<button class="rc-off ghost">Turn Socratic off</button></div>`;
