@@ -114,12 +114,32 @@ async function buildSession() {
   if (!url) return;
   ui.build.disabled = true;
   setStatus("Préparation de la session… (transcript + segmentation LLM, parfois quelques minutes)");
+
+  // Compteur de tokens en direct pendant le build : le "spinner" devient la
+  // preuve que Gemma 4 travaille localement (argument Edge, visible).
+  let baseline = null;
+  try { baseline = await api("/api/stats"); } catch { /* stats optional */ }
+  const ticker = baseline && setInterval(async () => {
+    try {
+      const s = await api("/api/stats");
+      const calls = s.calls - baseline.calls;
+      const tokens = (s.prompt_tokens + s.completion_tokens)
+                   - (baseline.prompt_tokens + baseline.completion_tokens);
+      if (calls > 0) {
+        setStatus(`Préparation de la session… ${calls} appels Gemma 4 · ` +
+          `${tokens.toLocaleString("fr-FR")} tokens traités sur cette machine 🔒`);
+      }
+    } catch { /* transient */ }
+  }, 1500);
+
   try {
     session = await api("/api/session", { url });
   } catch (e) {
     setStatus(`Échec : ${e.message}`);
     ui.build.disabled = false;
     return;
+  } finally {
+    if (ticker) clearInterval(ticker);
   }
   setStatus("");
   ui.build.disabled = false;
