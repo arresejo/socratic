@@ -219,6 +219,17 @@ input[type="text"] {
 }
 input[type="text"]:focus { border-color: #3ea6ff; }
 .status { color: #aaa; font-size: 13px; min-height: 17px; }
+.recap { display: flex; flex-direction: column; gap: 8px; }
+.recap-score { font-size: 16px; font-weight: 600; }
+.recap-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #ddd; }
+.recap-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.recap-time { color: #717171; font-variant-numeric: tabular-nums; }
+.recap-concept { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recap-verdict { color: #aaa; }
+.recap-weak { color: #ffd600; font-size: 13px; margin-top: 4px; }
+.recap-local { color: #6fdc8c; font-size: 13px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 10px; margin-top: 4px; }
+.recap-actions { display: flex; gap: 8px; margin-top: 6px; }
+.panel[data-state="recap"] .controls { display: none; }
 .micdot { width: 10px; height: 10px; border-radius: 50%; background: #3a4556; display: inline-block; transition: background .15s; }
 .micdot.live { background: #ff4e45; box-shadow: 0 0 8px rgba(255,78,69,.8); }
 .hidden { display: none !important; }
@@ -295,6 +306,7 @@ function ensurePanel() {
     <ul class="points"></ul>
     <div class="feedback hidden"></div>
     <div class="reexplain hidden"></div>
+    <div class="recap hidden"></div>
     <div class="controls">
       <span class="micdot hidden"></span>
       <button class="done hidden">I'm done speaking</button>
@@ -316,6 +328,7 @@ function ensurePanel() {
     points: panel.querySelector(".points"),
     feedback: panel.querySelector(".feedback"),
     reexplain: panel.querySelector(".reexplain"),
+    recap: panel.querySelector(".recap"),
     micDot: panel.querySelector(".micdot"),
     doneBtn: panel.querySelector(".done"),
     typeInput: panel.querySelector(".type"),
@@ -352,7 +365,7 @@ function setStatus(msg, busy = false) {
 }
 
 function resetPanel() {
-  for (const k of ["heard", "verdict", "feedback", "reexplain", "replayBtn", "continueBtn", "doneBtn", "micDot"]) {
+  for (const k of ["heard", "verdict", "feedback", "reexplain", "recap", "replayBtn", "continueBtn", "doneBtn", "micDot"]) {
     ui[k].classList.add("hidden");
   }
   ui.points.innerHTML = "";
@@ -429,6 +442,8 @@ function removeDots() {
 /* ---------- session ---------- */
 
 async function toggle() {
+  if (state === "watching") return showRecap();   // FAB vert = rapport à la demande
+  if (state === "recap") return closeRecap();
   if (state !== "idle") { teardownSession(); return; }
   const vid = new URL(location.href).searchParams.get("v");
   if (!vid) return;
@@ -463,6 +478,7 @@ async function toggle() {
   lastTime = video ? video.currentTime : 0;
   state = "watching";
   video.addEventListener("timeupdate", onTime);
+  video.addEventListener("ended", showRecap);   // bilan au moment naturel
   if (video.duration) renderDots();
   else video.addEventListener("loadedmetadata", renderDots, { once: true });
 }
@@ -470,7 +486,10 @@ async function toggle() {
 function teardownSession() {
   stopListening();
   stopSpeaking();
-  if (video) video.removeEventListener("timeupdate", onTime);
+  if (video) {
+    video.removeEventListener("timeupdate", onTime);
+    video.removeEventListener("ended", showRecap);
+  }
   window.removeEventListener("resize", renderDots);
   removeDots();
   ui.panel.classList.add("hidden");
@@ -695,6 +714,66 @@ function finishCp(verdict) {
     video.removeEventListener("play", pauseGuard);
     if (verdict !== "replay") video.play();
   }
+}
+
+/* ---------- session recap (fin de vidéo ou clic sur le FAB) ---------- */
+
+async function showRecap() {
+  if (!session || currentCp) return; // jamais par-dessus une question ouverte
+  ensurePanel();
+  stopSpeaking();
+  resetPanel();
+  state = "recap";
+  ui.panel.dataset.state = "recap";
+  ui.progress.textContent = "";
+  ui.question.textContent = "Session recap";
+
+  const answered = cps.filter((c) => ["pass", "partial", "miss"].includes(c.verdict));
+  const passed = answered.filter((c) => c.verdict === "pass").length;
+  const labels = { pass: "Correct", partial: "Almost there", miss: "Not quite",
+                   skipped: "Skipped", pending: "Upcoming", done: "Done" };
+  const rows = cps.map((cp) => {
+    const key = cp.verdict || cp.status;
+    const color = DOT_COLORS[key] || DOT_COLORS.pending;
+    return `<div class="recap-row"><span class="recap-dot" style="background:${color}"></span>` +
+      `<span class="recap-time">${fmtTime(cp.t_pause)}</span>` +
+      `<span class="recap-concept">${cp.concept}</span>` +
+      `<span class="recap-verdict">${labels[key] || key}</span></div>`;
+  }).join("");
+
+  let extra = "";
+  try { // points faibles récurrents (profil local, toutes sessions)
+    const r = await api(`/api/recap?video_id=${encodeURIComponent(session.video_id)}`);
+    const repeat = (r.weak_spots || []).filter((w) => w.count >= 2).slice(0, 2);
+    if (repeat.length) {
+      extra += `<div class="recap-weak">Recurring weak spot: ${repeat
+        .map((w) => `${w.point} (${w.count}×)`).join(" · ")}</div>`;
+    }
+  } catch { /* optional */ }
+  try { // la preuve Edge, mesurée
+    const s = await api("/api/stats");
+    const total = (s.prompt_tokens || 0) + (s.completion_tokens || 0);
+    const saved = (s.prompt_tokens / 1e6) * 2.5 + (s.completion_tokens / 1e6) * 10;
+    extra += `<div class="recap-local">🔒 ${s.calls} Gemma 4 calls · ` +
+      `${total.toLocaleString("en-US")} tokens on this machine — $0.00 of cloud API ` +
+      `(≈ $${saved.toFixed(2)} avoided)</div>`;
+  } catch { /* optional */ }
+
+  ui.recap.innerHTML =
+    `<div class="recap-score">You nailed ${passed}/${answered.length} answered questions</div>` +
+    rows + extra +
+    `<div class="recap-actions"><button class="rc-close primary">Keep watching ▸</button>` +
+    `<button class="rc-off ghost">Turn Socratic off</button></div>`;
+  ui.recap.querySelector(".rc-close").addEventListener("click", closeRecap);
+  ui.recap.querySelector(".rc-off").addEventListener("click", teardownSession);
+  ui.recap.classList.remove("hidden");
+  ui.panel.classList.remove("hidden");
+}
+
+function closeRecap() {
+  ui.recap.classList.add("hidden");
+  ui.panel.classList.add("hidden");
+  if (state === "recap") state = "watching";
 }
 
 /* ---------- boot + SPA navigation ---------- */
