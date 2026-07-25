@@ -367,6 +367,28 @@ const DOT_COLORS = {
   partial: "#f4b942", miss: "#f0616d", skipped: "#4a5568",
 };
 
+/* Position horizontale exacte d'un temps t sur la barre YouTube.
+ * Les vidéos chapitrées segmentent la barre avec ~2px d'espace entre chapitres :
+ * une simple règle de trois dérive (pastille décalée du curseur). On parcourt
+ * les segments réels (largeur ∝ durée du chapitre) en réintégrant les espaces. */
+function timeToBarX(t, duration, bar) {
+  const chapters = [...bar.querySelectorAll(".ytp-chapter-hover-container")];
+  if (chapters.length <= 1) return (t / duration) * bar.clientWidth;
+  const widths = chapters.map((c) => c.offsetWidth);
+  const gaps = chapters.map((c) => parseFloat(getComputedStyle(c).marginRight) || 0);
+  const totalW = widths.reduce((a, b) => a + b, 0);
+  let remaining = (t / duration) * totalW; // position en "largeur-temps"
+  let x = 0;
+  for (let i = 0; i < widths.length; i++) {
+    if (remaining <= widths[i] || i === widths.length - 1) {
+      return x + Math.min(remaining, widths[i]);
+    }
+    x += widths[i] + gaps[i];
+    remaining -= widths[i];
+  }
+  return x;
+}
+
 function renderDots() {
   const bar = document.querySelector(".ytp-progress-bar");
   if (!bar || !video || !video.duration) return;
@@ -377,7 +399,7 @@ function renderDots() {
     const color = DOT_COLORS[cp.verdict || cp.status] || DOT_COLORS.pending;
     // Inline styles: résiste au CSS YouTube et aux adblockers.
     dot.style.cssText = `position:absolute; top:50%;
-      left:${(cp.t_pause / video.duration) * 100}%;
+      left:${timeToBarX(cp.t_pause, video.duration, bar)}px;
       transform:translate(-50%,-50%); width:13px; height:13px;
       border-radius:50%; background:${color}; border:2px solid rgba(0,0,0,.6);
       z-index:100; pointer-events:auto; cursor:pointer;`;
@@ -419,6 +441,8 @@ async function toggle() {
       try {
         const s = await api("/api/stats");
         const tok = s.prompt_tokens + s.completion_tokens - base.prompt_tokens - base.completion_tokens;
+  // Les positions sont en px : re-caler quand la fenêtre/le player change de taille.
+  window.addEventListener("resize", renderDots);
         if (tok > 0) ui.fab.innerHTML = `<span class="sk-spin"></span>Gemma 4 · ${tok.toLocaleString()} tokens (local)`;
       } catch { /* transient */ }
     }, 1500);
@@ -447,6 +471,7 @@ function teardownSession() {
   stopListening();
   stopSpeaking();
   if (video) video.removeEventListener("timeupdate", onTime);
+  window.removeEventListener("resize", renderDots);
   removeDots();
   ui.panel.classList.add("hidden");
   ui.badge.classList.add("hidden");
