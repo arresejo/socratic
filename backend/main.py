@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -26,7 +27,17 @@ ROOT = Path(__file__).resolve().parent.parent
 SESSIONS_DIR = profile_mod.DATA_DIR / "sessions"
 TTS_CACHE_DIR = profile_mod.DATA_DIR / "tts_cache"
 
+
 app = FastAPI(title="Socratic")
+
+# The Chrome extension's content script calls this API from youtube.com.
+# The server only ever binds localhost by default — CORS open is safe here.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def _session_path(video_id: str) -> Path:

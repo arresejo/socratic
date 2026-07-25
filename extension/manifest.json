@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Socratic — the video quizzes you back",
+  "version": "0.1.0",
+  "description": "Local-first Socratic tutor for YouTube: auto-pause, spoken questions, evidence-based grading. All inference on your machine (Gemma 4).",
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": ["http://127.0.0.1:8123/*"]
+}
