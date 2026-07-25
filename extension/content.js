@@ -181,6 +181,12 @@ function buildOverlay() {
   const host = document.createElement("div");
   host.id = "socratic-host";
   document.documentElement.appendChild(host);
+  // CRITICAL: les hotkeys YouTube (espace=play, i=miniplayer, f=fullscreen,
+  // chiffres=seek) voient le host comme target (shadow retargeting) et PAS un
+  // input — taper une réponse pilotait le player. On coupe la propagation.
+  for (const evt of ["keydown", "keyup", "keypress"]) {
+    host.addEventListener(evt, (e) => e.stopPropagation());
+  }
   root = host.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = CSS;
@@ -398,9 +404,18 @@ async function fire(cp) {
   ui.panel.dataset.state = "question";
   ui.panel.classList.remove("hidden");
   state = "question";
+  // Garde anti-reprise : si quoi que ce soit relance la vidéo pendant la
+  // question (hotkey résiduel, autoplay), on la remet en pause.
+  video.addEventListener("play", pauseGuard);
   try { await playUrl(`${API}/api/tts/question/${session.video_id}/${cp.id}`); }
   catch { await speak(cp.question); }
   startListening();
+}
+
+function pauseGuard() {
+  if (currentCp && ["question", "listening", "evaluating", "feedback", "reexplain"].includes(state)) {
+    video.pause();
+  }
 }
 
 function startListening() {
@@ -541,7 +556,10 @@ function finishCp(verdict) {
   ui.panel.classList.add("hidden");
   state = "watching";
   renderDots();
-  if (video && verdict !== "replay") video.play();
+  if (video) {
+    video.removeEventListener("play", pauseGuard);
+    if (verdict !== "replay") video.play();
+  }
 }
 
 /* ---------- boot + SPA navigation ---------- */
