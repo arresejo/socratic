@@ -679,12 +679,20 @@ function boot() {
 
 function maybeAutoStart() {
   if (!AUTO_START || state !== "idle") return;
-  if (!new URL(location.href).searchParams.get("v")) return;
+  const vid = new URL(location.href).searchParams.get("v");
+  if (!vid) return;
   // Attendre que le player existe avant d'armer la session.
-  const wait = setInterval(() => {
+  const wait = setInterval(async () => {
     if (document.querySelector("video") && document.querySelector("#movie_player")) {
       clearInterval(wait);
-      if (state === "idle") toggle();
+      if (state !== "idle") return;
+      // Auto-start UNIQUEMENT si la session est en cache (instantané).
+      // Sinon chaque vidéo survolée lancerait un build LLM de plusieurs
+      // minutes en arrière-plan — builds concurrents = tout ralentit.
+      try {
+        const r = await fetch(`${API}/api/session/${vid}`);
+        if (r.ok && state === "idle") toggle();
+      } catch { /* backend down — FAB manuel */ }
     }
   }, 500);
   setTimeout(() => clearInterval(wait), 15000); // abandon silencieux hors /watch
