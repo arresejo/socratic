@@ -167,7 +167,7 @@ const CSS = `
 }
 .panel {
   position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%);
-  z-index: 2100; width: min(720px, calc(100% - 48px));
+  z-index: 2100; width: min(760px, calc(100% - 48px));
   background: rgba(18,18,18,.88);
   -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
   border: 1px solid rgba(255,255,255,.08); border-radius: 16px;
@@ -183,11 +183,11 @@ const CSS = `
   letter-spacing: 1.2px; text-transform: uppercase;
 }
 .brand .progress { margin-left: auto; color: #717171; letter-spacing: 0; }
-.question { font-size: 18px; font-weight: 500; line-height: 1.45; }
+.question { font-size: 20px; font-weight: 500; line-height: 1.45; }
 .panel[data-state="feedback"] .question, .panel[data-state="reexplain"] .question {
-  font-size: 13px; font-weight: 400; color: #aaa;
+  font-size: 14px; font-weight: 400; color: #aaa;
 }
-.heard { color: #aaa; font-size: 13px; font-style: italic; }
+.heard { color: #aaa; font-size: 14px; font-style: italic; }
 .verdict {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 5px 14px; border-radius: 999px; width: fit-content;
@@ -197,13 +197,13 @@ const CSS = `
 .verdict.pass { background: rgba(43,166,64,.16); color: #6fdc8c; }
 .verdict.partial { background: rgba(255,214,0,.10); color: #ffd600; }
 .verdict.miss { background: rgba(255,78,69,.13); color: #ff8a84; }
-.points { list-style: none; margin: 0; padding: 0; font-size: 13px; line-height: 1.5; }
+.points { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.55; }
 .points li.covered { color: #2ba640; } .points li.partial { color: #ffd600; } .points li.missed { color: #ff4e45; }
-.feedback { background: rgba(255,255,255,.06); border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
-.reexplain { background: rgba(62,166,255,.08); border-left: 3px solid #3ea6ff; border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
+.feedback { background: rgba(255,255,255,.06); border-radius: 10px; padding: 12px 16px; font-size: 15px; line-height: 1.55; }
+.reexplain { background: rgba(62,166,255,.08); border-left: 3px solid #3ea6ff; border-radius: 10px; padding: 12px 16px; font-size: 15px; line-height: 1.55; }
 .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 button {
-  border: none; border-radius: 18px; padding: 8px 16px; font-size: 13px;
+  border: none; border-radius: 18px; padding: 9px 18px; font-size: 14px;
   font-weight: 500; background: rgba(255,255,255,.1); color: #f1f1f1; cursor: pointer;
   transition: background .15s;
 }
@@ -215,10 +215,10 @@ button.ghost:hover { background: rgba(255,255,255,.1); color: #f1f1f1; }
 input[type="text"] {
   flex: 1; min-width: 200px; background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.14); border-radius: 18px;
-  color: #f1f1f1; padding: 8px 14px; font-size: 13px; outline: none;
+  color: #f1f1f1; padding: 9px 16px; font-size: 14px; outline: none;
 }
 input[type="text"]:focus { border-color: #3ea6ff; }
-.status { color: #aaa; font-size: 12px; min-height: 16px; }
+.status { color: #aaa; font-size: 13px; min-height: 17px; }
 .micdot { width: 10px; height: 10px; border-radius: 50%; background: #3a4556; display: inline-block; transition: background .15s; }
 .micdot.live { background: #ff4e45; box-shadow: 0 0 8px rgba(255,78,69,.8); }
 .hidden { display: none !important; }
