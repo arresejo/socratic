@@ -480,8 +480,7 @@ async function toggle() {
     return;
   }
   cps = session.checkpoints.map((c) => ({ ...c, status: "pending" }));
-  ui.fab.innerHTML = `${GLYPH}✓ ${cps.length} checkpoints`;
-  ui.fab.style.background = "#3ecf8e";
+  updateFab();
   ensurePanel();
   video = document.querySelector("video");
   lastTime = video ? video.currentTime : 0;
@@ -490,6 +489,23 @@ async function toggle() {
   video.addEventListener("ended", showRecap);   // bilan au moment naturel
   if (video.duration) renderDots();
   else video.addEventListener("loadedmetadata", renderDots, { once: true });
+}
+
+/* Le FAB raconte l'état : progression pendant le visionnage, invitation à
+ * consulter le rapport dès qu'il y a au moins un résultat à montrer. */
+function updateFab() {
+  const done = cps.filter((c) => c.verdict || c.status === "skipped").length;
+  if (done === 0) {
+    ui.fab.innerHTML = `${GLYPH}✓ ${cps.length} checkpoints`;
+    ui.fab.title = "Socratic is watching with you";
+  } else if (done < cps.length) {
+    ui.fab.innerHTML = `${GLYPH}${done}/${cps.length} · View recap`;
+    ui.fab.title = "View your session recap";
+  } else {
+    ui.fab.innerHTML = `${GLYPH}📋 View recap`;
+    ui.fab.title = "All questions done — view your recap";
+  }
+  ui.fab.style.background = "#3ecf8e";
 }
 
 function teardownSession() {
@@ -719,6 +735,7 @@ function finishCp(verdict) {
   ui.panel.classList.add("hidden");
   state = "watching";
   renderDots();
+  updateFab();
   if (video) {
     video.removeEventListener("play", pauseGuard);
     if (verdict !== "replay") video.play();
