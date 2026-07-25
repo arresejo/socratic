@@ -126,54 +126,60 @@ function stopListening() {
   if (rec) { rec.aborted = true; cancelAnimationFrame(rec.raf); finishListening(); }
 }
 
-/* ---------- overlay (shadow DOM: immune to YouTube CSS) ---------- */
+/* ---------- overlay (carte lower-third DANS le player, codes visuels YouTube) ---------- */
 
 const CSS = `
 :host { all: initial; }
-* { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; font-family: "Roboto", "YouTube Sans", -apple-system, BlinkMacSystemFont, sans-serif; }
 .badge {
-  position: fixed; top: 70px; right: 16px; z-index: 2147483647;
-  background: rgba(14,17,22,.92); color: #e7ecf3; border: 1px solid #4f8cff;
-  border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 600;
+  position: absolute; top: 16px; right: 16px; z-index: 2100;
+  background: rgba(18,18,18,.85); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  color: #f1f1f1; border: 1px solid rgba(255,255,255,.1); border-radius: 999px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500; pointer-events: none;
 }
-.fab {
-  position: fixed; bottom: 24px; right: 24px; z-index: 2147483647;
-  background: #4f8cff; color: #fff; border: none; border-radius: 999px;
-  padding: 12px 18px; font-size: 14px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,.4);
-}
-.fab.on { background: #3ecf8e; }
 .panel {
-  position: fixed; inset: 0; z-index: 2147483646;
-  background: rgba(10,13,18,.94); color: #e7ecf3;
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  padding: 6vh 12vw; gap: 14px;
+  position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%);
+  z-index: 2100; width: min(720px, calc(100% - 48px));
+  background: rgba(18,18,18,.88);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,.08); border-radius: 16px;
+  padding: 16px 20px; color: #f1f1f1;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.55);
+  pointer-events: auto;
 }
-.concept { color: #8b96a5; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-.question { font-size: 24px; font-weight: 650; line-height: 1.35; text-align: center; max-width: 900px; }
+.concept { color: #aaa; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 500; }
+.question { font-size: 17px; font-weight: 500; line-height: 1.45; }
 .panel[data-state="feedback"] .question, .panel[data-state="reexplain"] .question {
-  font-size: 15px; font-weight: 400; color: #8b96a5;
+  font-size: 13px; font-weight: 400; color: #aaa;
 }
-.heard { color: #8b96a5; font-style: italic; }
-.verdict { font-weight: 800; font-size: 22px; }
-.verdict.pass { color: #3ecf8e; } .verdict.partial { color: #f4b942; } .verdict.miss { color: #f0616d; }
-.points { list-style: none; margin: 0; padding: 0; font-size: 14px; max-width: 800px; }
-.points li.covered { color: #3ecf8e; } .points li.partial { color: #f4b942; } .points li.missed { color: #f0616d; }
-.feedback { background: #1e2530; border-radius: 8px; padding: 10px 14px; max-width: 800px; }
-.reexplain { background: #1e2530; border-left: 3px solid #4f8cff; border-radius: 8px; padding: 12px 14px; max-width: 800px; }
-.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.heard { color: #aaa; font-size: 13px; font-style: italic; }
+.verdict { font-weight: 700; font-size: 16px; }
+.verdict.pass { color: #2ba640; } .verdict.partial { color: #ffd600; } .verdict.miss { color: #ff4e45; }
+.points { list-style: none; margin: 0; padding: 0; font-size: 13px; line-height: 1.5; }
+.points li.covered { color: #2ba640; } .points li.partial { color: #ffd600; } .points li.missed { color: #ff4e45; }
+.feedback { background: rgba(255,255,255,.06); border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
+.reexplain { background: rgba(62,166,255,.08); border-left: 3px solid #3ea6ff; border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 button {
-  background: #4f8cff; color: #fff; border: none; border-radius: 8px;
-  padding: 10px 16px; font-size: 14px; cursor: pointer;
+  border: none; border-radius: 18px; padding: 8px 16px; font-size: 13px;
+  font-weight: 500; background: rgba(255,255,255,.1); color: #f1f1f1; cursor: pointer;
+  transition: background .15s;
 }
-button.ghost { background: transparent; border: 1px solid #2a3342; color: #8b96a5; }
+button:hover { background: rgba(255,255,255,.2); }
+button.primary { background: #f1f1f1; color: #0f0f0f; }
+button.primary:hover { background: #d9d9d9; }
+button.ghost { background: transparent; color: #aaa; }
+button.ghost:hover { background: rgba(255,255,255,.1); color: #f1f1f1; }
 input[type="text"] {
-  background: #171c24; border: 1px solid #2a3342; border-radius: 8px;
-  color: #e7ecf3; padding: 10px 12px; font-size: 14px; width: 340px;
+  flex: 1; min-width: 200px; background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14); border-radius: 18px;
+  color: #f1f1f1; padding: 8px 14px; font-size: 13px; outline: none;
 }
-.status { color: #8b96a5; font-size: 13px; min-height: 18px; }
-.micdot { width: 12px; height: 12px; border-radius: 50%; background: #3a4556; display: inline-block; }
-.micdot.live { background: #f0616d; }
+input[type="text"]:focus { border-color: #3ea6ff; }
+.status { color: #aaa; font-size: 12px; min-height: 16px; }
+.micdot { width: 10px; height: 10px; border-radius: 50%; background: #3a4556; display: inline-block; transition: background .15s; }
+.micdot.live { background: #ff4e45; box-shadow: 0 0 8px rgba(255,78,69,.8); }
 .hidden { display: none !important; }
 `;
 
@@ -181,16 +187,7 @@ function buildOverlay() {
   const host = document.createElement("div");
   host.id = "socratic-host";
   document.documentElement.appendChild(host);
-  // CRITICAL: les hotkeys YouTube (espace=play, i=miniplayer, f=fullscreen,
-  // chiffres=seek) voient le host comme target (shadow retargeting) et PAS un
-  // input — taper une réponse pilotait le player. On coupe la propagation.
-  for (const evt of ["keydown", "keyup", "keypress"]) {
-    host.addEventListener(evt, (e) => e.stopPropagation());
-  }
   root = host.attachShadow({ mode: "open" });
-  const style = document.createElement("style");
-  style.textContent = CSS;
-  root.appendChild(style);
 
   const fab = el("button", "socratic-fab", "🦉 Socratic");
   // Styles inline : résiste aux filtres cosmétiques des adblockers et à toute
@@ -203,9 +200,34 @@ function buildOverlay() {
     font-family:-apple-system,BlinkMacSystemFont,sans-serif;`;
   fab.addEventListener("click", toggle);
   root.appendChild(fab);
+  ui.fab = fab;
+}
+
+let panelHost = null;
+
+/* La carte vit DANS #movie_player : elle suit le player (theater, fullscreen),
+ * laisse la vidéo visible derrière, et n'obstrue ni les contrôles ni la barre
+ * de lecture (pointer-events:none hors carte — les pastilles restent cliquables). */
+function ensurePanel() {
+  const player = document.querySelector("#movie_player") || document.body;
+  if (panelHost && panelHost.parentElement === player) return;
+  if (panelHost) panelHost.remove();
+  panelHost = document.createElement("div");
+  panelHost.id = "socratic-panel-host";
+  panelHost.style.cssText = "position:absolute; inset:0; z-index:2050; pointer-events:none;";
+  // Les hotkeys YouTube (espace, i, f, chiffres) voient le host comme target
+  // (shadow retargeting), pas un input — on coupe la propagation.
+  for (const evt of ["keydown", "keyup", "keypress"]) {
+    panelHost.addEventListener(evt, (e) => e.stopPropagation());
+  }
+  player.appendChild(panelHost);
+  const proot = panelHost.attachShadow({ mode: "open" });
+  const style = document.createElement("style");
+  style.textContent = CSS;
+  proot.appendChild(style);
 
   const badge = el("div", "badge hidden", "");
-  root.appendChild(badge);
+  proot.appendChild(badge);
 
   const panel = el("div", "panel hidden", "");
   panel.innerHTML = `
@@ -220,16 +242,16 @@ function buildOverlay() {
       <span class="micdot hidden"></span>
       <button class="done hidden">J'ai fini de parler</button>
       <input type="text" class="type" placeholder="…ou répondez au clavier">
-      <button class="send">Envoyer</button>
+      <button class="send primary">Envoyer</button>
       <button class="replay hidden">↺ Revoir ce passage</button>
-      <button class="continue hidden">Continuer ▸</button>
+      <button class="continue primary hidden">Continuer ▸</button>
       <button class="skip ghost">Passer</button>
     </div>
     <div class="status"></div>`;
-  root.appendChild(panel);
+  proot.appendChild(panel);
 
-  ui = {
-    fab, badge, panel,
+  Object.assign(ui, {
+    badge, panel,
     concept: panel.querySelector(".concept"),
     question: panel.querySelector(".question"),
     heard: panel.querySelector(".heard"),
@@ -245,7 +267,7 @@ function buildOverlay() {
     continueBtn: panel.querySelector(".continue"),
     skipBtn: panel.querySelector(".skip"),
     status: panel.querySelector(".status"),
-  };
+  });
 
   ui.doneBtn.addEventListener("click", finishListening);
   ui.sendBtn.addEventListener("click", submitTyped);
@@ -353,6 +375,7 @@ async function toggle() {
   cps = session.checkpoints.map((c) => ({ ...c, status: "pending" }));
   ui.fab.textContent = `✓ Socratic — ${cps.length} checkpoints`;
   ui.fab.style.background = "#3ecf8e";
+  ensurePanel();
   video = document.querySelector("video");
   lastTime = video ? video.currentTime : 0;
   state = "watching";
@@ -408,6 +431,7 @@ function startCountdown(cp) {
 /* ---------- the loop ---------- */
 
 async function fire(cp) {
+  ensurePanel(); // le player a pu être re-rendu (theater/fullscreen)
   video.pause();
   currentCp = cp;
   cp.status = "active";
