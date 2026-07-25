@@ -281,6 +281,7 @@ function buildOverlay() {
 }
 
 let panelHost = null;
+let dotObserver = null;
 
 /* La carte vit DANS #movie_player : elle suit le player (theater, fullscreen),
  * laisse la vidéo visible derrière, et n'obstrue ni les contrôles ni la barre
@@ -465,8 +466,6 @@ async function toggle() {
       try {
         const s = await api("/api/stats");
         const tok = s.prompt_tokens + s.completion_tokens - base.prompt_tokens - base.completion_tokens;
-  // Les positions sont en px : re-caler quand la fenêtre/le player change de taille.
-  window.addEventListener("resize", renderDots);
         if (tok > 0) ui.fab.innerHTML = `<span class="sk-spin"></span>Gemma 4 · ${tok.toLocaleString()} tokens (local)`;
       } catch { /* transient */ }
     }, 1500);
@@ -490,6 +489,14 @@ async function toggle() {
   keepControlsVisible(true);
   if (video.duration) renderDots();
   else video.addEventListener("loadedmetadata", renderDots, { once: true });
+  // Positions en px → recaler à CHAQUE changement de géométrie de la barre
+  // (mode théâtre, panneau latéral… ne déclenchent pas de resize fenêtre).
+  const bar = document.querySelector(".ytp-progress-bar");
+  if (bar && window.ResizeObserver) {
+    dotObserver = new ResizeObserver(() => renderDots());
+    dotObserver.observe(bar);
+  }
+  window.addEventListener("resize", renderDots);
 }
 
 /* Tant qu'une session est active, la barre de lecture reste visible : les
@@ -533,6 +540,7 @@ function teardownSession() {
     video.removeEventListener("ended", showRecap);
   }
   window.removeEventListener("resize", renderDots);
+  if (dotObserver) { dotObserver.disconnect(); dotObserver = null; }
   keepControlsVisible(false);
   removeDots();
   ui.panel.classList.add("hidden");
